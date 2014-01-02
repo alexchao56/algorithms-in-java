@@ -401,5 +401,251 @@ public class BinarySearchTree<T extends Comparable<T>> implements ITree<T> {
         return values;
     }
 
-    
+    /** Get an array representation of the tree in level order.
+     * Returns level order sorted array representing the tree. */
+    public T[] getLevelOrder() {
+        return getBFS();
+    }
+
+    /** Get an array representation of the tree in-order. 
+     * Returns in-order sorted array representing the tree. */
+    public T[] getDFS(DepthFirstSearchOrder order) {
+        Set<Node<T>> added = new HashSet<Node<T>>(2);
+        T[] nodes = (T[]) new Comparable[size];
+        int index = 0;
+        Node<T> node = root;
+        while (index < size && node != null) {
+            Node<T> parent = node.parent;
+            Node<T> lesser = (node.lesser != null && !added.contains(node.lesser)) ? node.lesser : null;
+            Node<T> greater = (node.greater != null && !added.contains(node.greater)) ? node.greater : null;
+
+            if (parent == null && lesser == null && greater == null) {
+                if (!added.contains(node))
+                    nodes[index++] = node.id;
+                break;
+            }
+
+            if (order == DepthFirstSearchOrder.inOrder) {
+                if (lesser != null) {
+                    node = lesser;
+                } else {
+                    if (!added.contains(node)) {
+                        nodes[index++] = node.id;
+                        added.add(node);
+                    }
+                    if (greater != null) {
+                        node = greater;
+                    } else if (added.contains(node)) {
+                        node = parent;
+                    } else {
+                        /** We should not get here. Stop the loop! */
+                        node = null;
+                    }
+                }
+            } else if (order == DepthFirstSearchOrder.preOrder) {
+                if (!added.contains(node)) {
+                    nodes[index++] = node.id;
+                    added.add(node);
+                }
+                if (lesser != null) {
+                    node = lesser;
+                } else if (greater != null) {
+                    node = greater;
+                } else if (added.contains(node)) {
+                    node = parent;
+                } else {
+                    /** We should not get here. Stop the loop! */
+                    node = null;
+                }
+            } else {
+                /** post-Order */
+                if (lesser != null) {
+                    node = lesser;
+                } else {
+                    if (!added.contains(node)) {
+                        nodes[index++] = node.id;
+                        added.add(node);
+                    }
+                    if (greater != null) {
+                        node = greater;
+                    } else if (added.contains(node)) {
+                        node = parent;
+                    } else {
+                        /** We should not get here. Stop the loop! */
+                        node = null;
+                    }
+                }
+            }
+        }
+        return nodes;
+    }
+
+    /** Get an array representation of the tree in sorted order.
+     * Returns sorted array representing the tree. */
+    public T[] getSorted() {
+        // Depth first search to traverse the tree in-order sorted.
+        return getDFS(DepthFirstSearchOrder.inOrder);
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public java.util.Collection<T> toCollection() {
+        return (new JavaCompatibleBinarySearchTree<T>(this));
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public String toString() {
+        return TreePrinter.getString(this);
+    }
+
+    protected static class Node<T extends Comparable<T>> {
+
+        protected T id = null;
+        protected Node<T> parent = null;
+        protected Node<T> lesser = null;
+        protected Node<T> greater = null;
+
+        /** Node constructor. */
+        protected Node(Node<T> parent, T id) {
+            this.parent = parent;
+            this.id = id;
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public String toString() {
+            return "id =" + id + " parent=" + ((parent != null) ? parent.id : "NULL") + " lesser="
+                    + ((lesser != null) ? lesser.id : "NULL") + " greater=" + ((greater != null) ? greater.id : "NULL");
+        }
+    }
+
+    protected static interface INodeCreator<T extends Comparable<T>> {
+
+        /** Create a new Node with the following parameters */
+        public Node<T> createNewNode(Node<T> parent, T id);
+    }
+
+    protected static class TreePrinter {
+
+        public static <T extends Comparable<T>> String getString(BinarySearchTree<T> tree) {
+            if (tree.root == null)
+                return "Tree has no nodes.";
+            return getString(tree.root, "", true);
+        }
+
+        private static <T extends Comparable<T>> String getString(Node<T> node, String prefix, boolean isTail) {
+            StringBuilder builder = new StringBuilder();
+
+            if (node.parent != null) {
+                String side = "left";
+                if (node.equals(node.parent.greater))
+                    side = "right";
+                builder.append(prefix + (isTail ? "└── " : "├── ") + "(" + side + ") " + node.id + "\n");
+            } else {
+                builder.append(prefix + (isTail ? "└── " : "├── ") + node.id + "\n");
+            }
+            List<Node<T>> children = null;
+            if (node.lesser != null || node.greater != null) {
+                children = new ArrayList<Node<T>>(2);
+                if (node.lesser != null)
+                    children.add(node.lesser);
+                if (node.greater != null)
+                    children.add(node.greater);
+            }
+            if (children != null) {
+                for (int i = 0; i < children.size() - 1; i++) {
+                    builder.append(getString(children.get(i), prefix + (isTail ? "    " : "│   "), false));
+                }
+                if (children.size() >= 1) {
+                    builder.append(getString(children.get(children.size() - 1), prefix + (isTail ? "    " : "│   "),
+                            true));
+                }
+            }
+
+            return builder.toString();
+        }
+    }
+
+    private static class JavaCompatibleBinarySearchTree<T extends Comparable<T>> extends java.util.AbstractCollection<T> {
+
+        protected BinarySearchTree<T> tree = null;
+
+        public JavaCompatibleBinarySearchTree(BinarySearchTree<T> tree) {
+            this.tree = tree;
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public boolean add(T value) {
+            return tree.add(value);
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public boolean remove(Object value) {
+            return (tree.remove((T)value)!=null);
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public boolean contains(Object value) {
+            return tree.contains((T)value);
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public int size() {
+            return tree.size();
+        }
+
+        /** {@inheritDoc} */
+        @Override
+        public java.util.Iterator<T> iterator() {
+            return (new BinarySearchTreeIterator<T>(this.tree));
+        }
+
+        private static class BinarySearchTreeIterator<C extends Comparable<C>> implements java.util.Iterator<C> {
+
+            private BinarySearchTree<C> tree = null;
+            private BinarySearchTree.Node<C> last = null;
+            private Deque<BinarySearchTree.Node<C>> toVisit = new ArrayDeque<BinarySearchTree.Node<C>>();
+
+            protected BinarySearchTreeIterator(BinarySearchTree<C> tree) {
+                this.tree = tree;
+                if (tree.root!=null) toVisit.add(tree.root);
+            }
+
+            /** {@inheritDoc} */
+            @Override
+            public boolean hasNext() {
+                if (toVisit.size()>0) return true; 
+                return false;
+            }
+
+            /** * {@inheritDoc} */
+            @Override
+            public C next() {
+                while (toVisit.size()>0) {
+                    /** Go through the current nodes */
+                    BinarySearchTree.Node<C> n = toVisit.pop();
+
+                    /** Add non-null children */
+                    if (n.lesser!=null) toVisit.add(n.lesser);
+                    if (n.greater!=null) toVisit.add(n.greater);
+ 
+                    /** Update last node (used in remove method) */
+                    last = n;
+                    return n.id;
+                }
+                return null;
+            }
+
+            /** {@inheritDoc} */
+            @Override
+            public void remove() {
+                tree.removeNode(last);
+            }
+        }
+    }
 }
