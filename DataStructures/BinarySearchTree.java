@@ -16,7 +16,7 @@ import java.util.Set;
  * @author Alex Chao
  */
 
-public class BinarySearchTree<T extends Comparable<T>> implements ITree<T> {
+public class BinarySearchTree<T extends Comparable<T>> implements Tree<T> {
 
 	private int modifications = 0;
 
